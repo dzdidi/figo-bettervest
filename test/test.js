@@ -7,15 +7,16 @@ var figo = require('figo');
 var ACCESS_TOKEN = "ASHWLIkouP2O6_bgA2wWReRhletgWKHYjLqDaqb0LFfamim9RjexTo22ujRIP_cjLiRiSyQXyt2kM1eXU2XLFZQ0Hro15HikJQT_eNeT_9XQ";
 
 //doubling figo library
-before(function(){
+beforeEach(function(){
   this.stub = sinon.stub(figo, 'Session');
   this.stub.returns({
     get_transactions: function(){},
-    get_accounts: function(){}
+    get_accounts: function(){},
+    add_payment: function(){}
   });
 });
 
-after(function(){
+afterEach(function(){
   this.stub.restore();
 });
 describe('bettervest Figo library test', function(){
@@ -101,6 +102,54 @@ describe('bettervest Figo library test', function(){
 
     it('should return pending promise', function(){
       assert.equal(index.getTransactions('1', ACCESS_TOKEN).inspect().state, 'pending');
+    });
+  });
+
+  describe('makePayment function', function(){
+    it('should have makePayment function', function(){
+      assert.equal(typeof index.makePayment, 'function');
+    });
+
+    it('it should accept four parameters', function(){
+      assert.equal(index.makePayment.length, 4);
+    });
+    //parameters validation should be added
+    it('should create figo session', function(){
+      index.makePayment(ACCESS_TOKEN, {}, 'sum', {});
+
+      assert.equal(this.stub.called, true);
+    });
+
+    it('should create promise', function(){
+      var spy = sinon.spy(q, 'promise');
+      index.makePayment(ACCESS_TOKEN, {}, 'sum', {});
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should call figo add_payment method', function(){
+      var spy = sinon.spy(this.stub(), 'add_payment');
+      index.makePayment(ACCESS_TOKEN, {}, 'sum', {});
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should return pending promise', function(){
+      assert.equal(index.makePayment(ACCESS_TOKEN, {}, 'sum', {}).inspect().state, 'pending');
+    });
+  });
+
+  describe('createPaymentContainer function', function(){
+    it('shoud have createPaymentContainer function', function(){
+      assert.equal(typeof index.createPaymentContainer, 'function');
+    });
+
+    it('should accept two parameters', function(){
+      assert.equal(index.createPaymentContainer.length, 2);
     });
   });
 

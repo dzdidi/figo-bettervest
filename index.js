@@ -12,7 +12,9 @@ if(process.env.NODE_ENV == 'test'){
   module.exports = {getAccounts: getAccounts,
                     getTransactions:getTransactions,
                     transactionFilter: transactionFilter,
-                    cleanTransactionSubject: cleanTransactionSubject
+                    makePayment: makePayment,
+                    cleanTransactionSubject: cleanTransactionSubject,
+                    createPaymentContainer: createPaymentContainer
                     }
 } else{
   module.exports = {getAccounts: getAccounts,
@@ -55,6 +57,28 @@ function getTransactions(account_id, access_token){
   });
 };
 
+
+//to much parameters logic should be changed
+function makePayment(access_token, account, amount, users_list){
+  var payment_payload = {
+    "account_id": account.account_id,
+    "amount": amount,
+    "container": createPaymentContainer(account, users_list)
+  };
+  var session = figo.Session(access_token);
+  return Q.promise(function(resolve, reject){
+    session.add_payment(payment_payload, function(err, payments){
+      if(err)
+        reject(err);
+      resolve(payments);
+    });
+  });
+};
+
+/* ==========================
+    additional logic helpers
+   ========================== */
+
 function transactionFilter(transaction){
   return(dateFormat(transaction.booking_date, 'dd-mm-yyyy') === dateFormat(new Date(), 'dd-mm-yyyy'));
 };
@@ -68,14 +92,32 @@ function cleanTransactionSubject(transaction){
   return(transaction);
 };
 
-function makePayment(){
-  //payment logic here for receiving money for specific account with specific transaction subject
+// should be rewised
+function createPaymentContainer(account, users_list){
+  var container = [];
+  if(!Array.isArray(users_list)){
+    var val = users_list;
+    users_list = new Array();
+    users_list.push(val);
+  };
+  try{
+    users_list.forEach(function(listEntry){
+      var payment = {
+        "account_id": account.account_id,
+        "amount": listEntry.amount,
+        "bank_code": listEntry.bank_code,
+        // "bank_name": listEntry.bank_name, //not really necessary
+        "account_number": listEntry.account_number,
+        "currency": "EUR",
+        "name": "bettervest",
+        "purpose": "some optional information here",
+        "type": "Transfer"
+      };
+      container.push(payment);
+    });
+  } catch(e){
+
+  }
+
+  return container;
 };
-
-function makeTrasaction(/*summ*//*list of users with sums*/){
-  //logic for performing transactions to customers from specific account with transaction amount dependent from customers investment share
-}
-
-function getTransactionsForAccount(account){
-
-}
