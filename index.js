@@ -72,7 +72,7 @@ function makePayment(){
   //payment logic here for receiving money for specific account with specific transaction subject
 };
 
-function makeTrasaction(){
+function makeTrasaction(/*summ*//*list of users with sums*/){
   //logic for performing transactions to customers from specific account with transaction amount dependent from customers investment share
 }
 
