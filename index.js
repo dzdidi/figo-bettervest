@@ -21,6 +21,8 @@ if(process.env.NODE_ENV == 'test'){
 };
 
 function getAccounts(access_token){
+  if(!access_token)
+    return(Error('Access token should be passed'));
   var session = new figo.Session(access_token);
   // session.get_accounts(function(err, accounts){
   //   console.log(accounts[0]);
@@ -35,6 +37,8 @@ function getAccounts(access_token){
 };
 
 function getTransactions(account_id, access_token){
+  if(!access_token || !account_id)
+    return(Error('Access token and Account ID should be passed'));
   var session = new figo.Session(access_token);
   // session.get_transactions(account_id, function(err, transactions){
   //   transactions = transactions.filter(transactionFilter);
@@ -57,15 +61,11 @@ function transactionFilter(transaction){
 
 function cleanTransactionSubject(transaction){
   var pattern = /\d+\.\d+/
-  try{
-    var purpose = transaction.purpose.match(pattern);
-    if(purpose == null)
-      throw Error('Subject without Invest and Project');
-    transaction.purpose = {investID: purpose[0].split('.')[0], projectID: purpose[0].split('.')[1]};
-    return(transaction);
-  }catch(e){
-    return(e);
-  };
+  var purpose = transaction.purpose.match(pattern);
+  if(purpose == null)
+      return Error('Subject without Invest and Project');
+  transaction.purpose = {investID: purpose[0].split('.')[0], projectID: purpose[0].split('.')[1]};
+  return(transaction);
 };
 
 function makePayment(){
