@@ -1,0 +1,29 @@
+{
+  "name": "figo-processor",
+  "version": "0.0.1",
+  "description": "figo transactions getting library ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Denys Zaliskyi",
+  "license": "ISC",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "figo": "^1.1.1",
+    "q": "^1.4.1",
+    "dateformat": "^1.0.11",
+    "sinon": "^1.15.4"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5"
+  },
+  "keywords": [
+    "figo",
+    "accounts",
+    "transactions",
+    "payments"
+  ]
+}
