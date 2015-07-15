@@ -12,7 +12,8 @@ beforeEach(function(){
   this.stub.returns({
     get_transactions: function(){},
     get_accounts: function(){},
-    add_payment: function(){}
+    add_payment: function(){},
+    submit_payment: function(){}
   });
 });
 
@@ -141,6 +142,44 @@ describe('bettervest Figo library test', function(){
     it('should return pending promise', function(){
       assert.equal(index.makePayment(ACCESS_TOKEN, {}, 'sum', {}).inspect().state, 'pending');
     });
+  });
+
+  describe('submitPayment function', function(){
+    it('should have submitPayment function', function(){
+      assert.equal(typeof index.submitPayment, 'function');
+    });
+
+    it('should accept three parameters', function(){
+      assert.equal(index.submitPayment.length, 3);
+    });
+
+    it('should create figo session', function(){
+      index.submitPayment({},{},{});
+
+      assert.equal(this.stub.called, true);
+    });
+
+    it('should create promise', function(){
+      var spy = sinon.spy(q, 'promise');
+      index.submitPayment({},{},{});
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should call figo submit_payment function', function(){
+      var spy = sinon.spy(this.stub(), 'submit_payment');
+      index.submitPayment({supported_tan_schemes:[{tan_scheme_id: '1'}]},{}, ACCESS_TOKEN);
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+  });
+
+  it('should return pending promise', function(){
+    assert.equal(index.submitPayment({supported_tan_schemes:[{tan_scheme_id: '1'}]}, {}, ACCESS_TOKEN).inspect().state, 'pending');
   });
 
   describe('createPaymentContainer function', function(){

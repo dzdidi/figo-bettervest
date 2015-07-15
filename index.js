@@ -14,7 +14,8 @@ if(process.env.NODE_ENV == 'test'){
                     transactionFilter: transactionFilter,
                     makePayment: makePayment,
                     cleanTransactionSubject: cleanTransactionSubject,
-                    createPaymentContainer: createPaymentContainer
+                    createPaymentContainer: createPaymentContainer,
+                    submitPayment: submitPayment
                     }
 } else{
   module.exports = {getAccounts: getAccounts,
@@ -57,7 +58,6 @@ function getTransactions(account_id, access_token){
   });
 };
 
-
 //to much parameters logic should be changed
 function makePayment(access_token, account, amount, users_list){
   var payment_payload = {
@@ -65,12 +65,26 @@ function makePayment(access_token, account, amount, users_list){
     "amount": amount,
     "container": createPaymentContainer(account, users_list)
   };
-  var session = figo.Session(access_token);
+  var session = new figo.Session(access_token);
   return Q.promise(function(resolve, reject){
     session.add_payment(payment_payload, function(err, payments){
       if(err)
         reject(err);
-      resolve(payments);
+      resolve(account, payments);
+    });
+  });
+};
+//payment, tan_scheme_id, state, redirect_uri, callback
+function submitPayment(account, payment, access_token){
+  //tan_scheme_id - shoud be stated in account information probably it depends from bank
+  var session = new figo.Session(access_token);
+  return Q.promise(function(resolve, reject){
+    // session.submit_payment(payment, tan_scheme_id, state, redirect_uri, callback)
+    session.submit_payment(payment, account.supported_tan_schemes[0].tan_scheme_id, 'payment submitted', 'localhost:3000', function(err, result){
+      if(err)
+        reject(err);
+      //result is url which ahs to be opened by user probably for tan payment approvement
+      resolve(result);
     });
   });
 };
@@ -106,6 +120,7 @@ function createPaymentContainer(account, users_list){
         "account_id": account.account_id,
         "amount": listEntry.amount,
         "bank_code": listEntry.bank_code,
+        "iban": listEntry.iban,
         // "bank_name": listEntry.bank_name, //not really necessary
         "account_number": listEntry.account_number,
         "currency": "EUR",
@@ -116,7 +131,7 @@ function createPaymentContainer(account, users_list){
       container.push(payment);
     });
   } catch(e){
-
+    return(e);
   }
 
   return container;
