@@ -15,11 +15,15 @@ if(process.env.NODE_ENV == 'test'){
                     makePayment: makePayment,
                     cleanTransactionSubject: cleanTransactionSubject,
                     createPaymentContainer: createPaymentContainer,
-                    submitPayment: submitPayment
+                    submitPayment: submitPayment,
+                    getPayments: getPayments
                     }
 } else{
   module.exports = {getAccounts: getAccounts,
-                    getTransactions:getTransactions
+                    getTransactions:getTransactions,
+                    makePayment: makePayment,
+                    getPayments: getPayments,
+                    submitPayment: submitPayment
                     }
 };
 
@@ -27,14 +31,11 @@ function getAccounts(access_token){
   if(!access_token)
     return(Error('Access token should be passed'));
   var session = new figo.Session(access_token);
-  // session.get_accounts(function(err, accounts){
-  //   console.log(accounts[0]);
-  // })
   return Q.promise(function(resolve, reject){
     session.get_accounts(function(error, accounts){
       if(error)
         reject(error);
-      resolve(accounts);
+      resolve(accounts[1]);
     });
   });
 };
@@ -43,10 +44,6 @@ function getTransactions(account_id, access_token){
   if(!access_token || !account_id)
     return(Error('Access token and Account ID should be passed'));
   var session = new figo.Session(access_token);
-  // session.get_transactions(account_id, function(err, transactions){
-  //   transactions = transactions.filter(transactionFilter);
-  //   transactions = transactions.map(cleanTransactionSubject);
-  // });
   return Q.promise(function(resolve, reject){
     session.get_transactions(function(error, transactions){
       if(error)
@@ -59,36 +56,55 @@ function getTransactions(account_id, access_token){
 };
 
 //to much parameters logic should be changed
+// test account A1.1 does not support container payments
 function makePayment(access_token, account, amount, users_list){
   var payment_payload = {
     "account_id": account.account_id,
     "amount": amount,
-    "container": createPaymentContainer(account, users_list)
+    // "container": createPaymentContainer(account, users_list),
+    //----------
+    "bank_code": users_list.bank_code,
+    "iban": users_list.iban,
+    "account_number": users_list.account_number,
+    "currency": "EUR",
+    "name": "bettervest",
+    "purpose": "some optional information here",
+    "type": "Transfer",
+    //-------
+    dump: function(){return this}
   };
   var session = new figo.Session(access_token);
   return Q.promise(function(resolve, reject){
-    session.add_payment(payment_payload, function(err, payments){
+    session.add_payment(payment_payload, function(err, payment){
       if(err)
         reject(err);
-      resolve(account, payments);
+      resolve(payment);
     });
   });
 };
-//payment, tan_scheme_id, state, redirect_uri, callback
-function submitPayment(account, payment, access_token){
-  //tan_scheme_id - shoud be stated in account information probably it depends from bank
+
+function submitPayment(payment, account, access_token){
   var session = new figo.Session(access_token);
   return Q.promise(function(resolve, reject){
-    // session.submit_payment(payment, tan_scheme_id, state, redirect_uri, callback)
     session.submit_payment(payment, account.supported_tan_schemes[0].tan_scheme_id, 'payment submitted', 'localhost:3000', function(err, result){
       if(err)
         reject(err);
-      //result is url which ahs to be opened by user probably for tan payment approvement
+      //result is url which must to be opened by user probably for payment approvement
       resolve(result);
     });
   });
 };
 
+function getPayments(account, access_token){
+  session = new figo.Session(access_token);
+  return Q.promise(function(resolve, reject){
+    session.get_payments(account.account_id, function(err, data){
+      if(err)
+        reject(err);
+      resolve(data);
+    });
+  });
+};
 /* ==========================
     additional logic helpers
    ========================== */
@@ -126,7 +142,8 @@ function createPaymentContainer(account, users_list){
         "currency": "EUR",
         "name": "bettervest",
         "purpose": "some optional information here",
-        "type": "Transfer"
+        "type": "Transfer",
+        dump: function(){return this}
       };
       container.push(payment);
     });

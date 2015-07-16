@@ -1,10 +1,11 @@
 var assert = require('assert');
 var sinon = require('sinon');
 var index = require('../index.js');
+var examples = require('../examples.js');
 var q = require('q');
 var figo = require('figo');
 
-var ACCESS_TOKEN = "ASHWLIkouP2O6_bgA2wWReRhletgWKHYjLqDaqb0LFfamim9RjexTo22ujRIP_cjLiRiSyQXyt2kM1eXU2XLFZQ0Hro15HikJQT_eNeT_9XQ";
+
 
 //doubling figo library
 beforeEach(function(){
@@ -13,7 +14,8 @@ beforeEach(function(){
     get_transactions: function(){},
     get_accounts: function(){},
     add_payment: function(){},
-    submit_payment: function(){}
+    submit_payment: function(){},
+    get_payments: function(){}
   });
 });
 
@@ -37,7 +39,7 @@ describe('bettervest Figo library test', function(){
 
     it('should create promise', function(){
       var spy = sinon.spy(q, 'promise');
-      index.getAccounts(ACCESS_TOKEN);
+      index.getAccounts(examples.access_token);
 
       assert.equal(spy.called, true);
 
@@ -45,7 +47,7 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should create figo session', function(){
-      index.getAccounts(ACCESS_TOKEN);
+      index.getAccounts(examples.access_token);
 
       assert.equal(this.stub.called, true);
     });
@@ -53,14 +55,14 @@ describe('bettervest Figo library test', function(){
     it('should call figo get_accounts method', function(){
       var spy = sinon.spy(this.stub(), 'get_accounts');
 
-      index.getAccounts(ACCESS_TOKEN);
+      index.getAccounts(examples.access_token);
       assert.equal(spy.called, true);
 
       spy.restore();
     });
 
     it('should return pending promise', function(){
-      assert.equal(index.getAccounts(ACCESS_TOKEN).inspect().state, 'pending');
+      assert.equal(index.getAccounts(examples.access_token).inspect().state, 'pending');
     });
   });
 
@@ -79,7 +81,7 @@ describe('bettervest Figo library test', function(){
 
     it('should create promise', function(){
       var spy = sinon.spy(q, 'promise');
-      index.getTransactions('1', ACCESS_TOKEN);
+      index.getTransactions('1', examples.access_token);
 
       assert.equal(spy.called, true);
 
@@ -87,14 +89,14 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should create figo session', function(){
-      index.getTransactions('1', ACCESS_TOKEN);
+      index.getTransactions('1', examples.access_token);
 
       assert.equal(this.stub.called, true);
     });
 
     it('should call figo get_transactions method', function(){
       var spy = sinon.spy(this.stub(), 'get_transactions');
-      index.getTransactions('1', ACCESS_TOKEN);
+      index.getTransactions('1', examples.access_token);
 
       assert.equal(spy.called, true);
 
@@ -102,7 +104,7 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should return pending promise', function(){
-      assert.equal(index.getTransactions('1', ACCESS_TOKEN).inspect().state, 'pending');
+      assert.equal(index.getTransactions('1', examples.access_token).inspect().state, 'pending');
     });
   });
 
@@ -116,14 +118,14 @@ describe('bettervest Figo library test', function(){
     });
     //parameters validation should be added
     it('should create figo session', function(){
-      index.makePayment(ACCESS_TOKEN, {}, 'sum', {});
+      index.makePayment(examples.access_token, examples.account_from, 0, examples.account_to);
 
       assert.equal(this.stub.called, true);
     });
 
     it('should create promise', function(){
       var spy = sinon.spy(q, 'promise');
-      index.makePayment(ACCESS_TOKEN, {}, 'sum', {});
+      index.makePayment(examples.access_token, {}, 'sum', {});
 
       assert.equal(spy.called, true);
 
@@ -132,7 +134,7 @@ describe('bettervest Figo library test', function(){
 
     it('should call figo add_payment method', function(){
       var spy = sinon.spy(this.stub(), 'add_payment');
-      index.makePayment(ACCESS_TOKEN, {}, 'sum', {});
+      index.makePayment(examples.access_token, {}, 'sum', {});
 
       assert.equal(spy.called, true);
 
@@ -140,7 +142,7 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should return pending promise', function(){
-      assert.equal(index.makePayment(ACCESS_TOKEN, {}, 'sum', {}).inspect().state, 'pending');
+      assert.equal(index.makePayment(examples.access_token, {}, 'sum', {}).inspect().state, 'pending');
     });
   });
 
@@ -154,7 +156,7 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should create figo session', function(){
-      index.submitPayment({},{},{});
+      index.submitPayment();
 
       assert.equal(this.stub.called, true);
     });
@@ -170,16 +172,45 @@ describe('bettervest Figo library test', function(){
 
     it('should call figo submit_payment function', function(){
       var spy = sinon.spy(this.stub(), 'submit_payment');
-      index.submitPayment({supported_tan_schemes:[{tan_scheme_id: '1'}]},{}, ACCESS_TOKEN);
+      index.submitPayment(examples.payment, examples.account_from, examples.access_token);
 
       assert.equal(spy.called, true);
 
       spy.restore();
     });
+
+    it('should return pending promise', function(){
+      assert.equal(index.submitPayment(examples.payment, examples.account_from, examples.access_token).inspect().state, 'pending');
+    });
   });
 
-  it('should return pending promise', function(){
-    assert.equal(index.submitPayment({supported_tan_schemes:[{tan_scheme_id: '1'}]}, {}, ACCESS_TOKEN).inspect().state, 'pending');
+  describe('getPayments function', function(){
+    it('should have getPayments function', function(){
+      assert.equal(typeof index.getPayments, 'function');
+    });
+
+    it('should accept two parameters', function(){
+      assert.equal(index.getPayments.length, 2);
+    });
+
+    it('shoud create figo Session', function(){
+      index.getPayments();
+
+      assert.equal(this.stub.called, true);
+    });
+
+    it('should create promise', function(){
+      var spy = sinon.spy(q, 'promise');
+      index.getPayments();
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should retrun pending promise', function(){
+      assert.equal(index.getPayments(examples.account_from, examples.access_token).inspect().state, 'pending');
+    });
   });
 
   describe('createPaymentContainer function', function(){
