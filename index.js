@@ -1,6 +1,8 @@
 var figo = require('figo');
+var examples = require('./examples.js')
 var Q = require('q');
 var dateFormat = require('dateformat');
+var https = require('https');
 
 var credentials = {
   "app_url": "http://localhost:3000",
@@ -9,7 +11,8 @@ var credentials = {
 };
 
 if(process.env.NODE_ENV == 'test'){
-  module.exports = {getAccounts: getAccounts,
+  module.exports = {getToken: getToken,
+                    getAccounts: getAccounts,
                     getTransactions:getTransactions,
                     transactionFilter: transactionFilter,
                     makePayment: makePayment,
@@ -17,20 +20,38 @@ if(process.env.NODE_ENV == 'test'){
                     createPaymentContainer: createPaymentContainer,
                     submitPayment: submitPayment,
                     getPayments: getPayments
-                    }
+                  };
 } else{
   module.exports = {getAccounts: getAccounts,
                     getTransactions:getTransactions,
                     makePayment: makePayment,
                     getPayments: getPayments,
-                    submitPayment: submitPayment
-                    }
+                    submitPayment: submitPayment,
+                    getToken: getToken
+                  };
+};
+
+function getToken(username, password){
+  var options = {
+    "grant_type": "password",
+    "username": username,
+    "password": password
+  };
+
+  return Q.promise(function(resolve, reject){
+    var connection = new figo.Connection(examples.client_id, examples.client_secret);
+    connection.query_api("/auth/token", options, function(err, data){
+      if(err)
+        reject(err);
+      resolve(data);
+    });
+  });
 };
 
 function getAccounts(access_token){
   if(!access_token)
     return(Error('Access token should be passed'));
-  var session = new figo.Session(access_token);
+  var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.get_accounts(function(error, accounts){
       if(error)
@@ -43,7 +64,7 @@ function getAccounts(access_token){
 function getTransactions(account_id, access_token){
   if(!access_token || !account_id)
     return(Error('Access token and Account ID should be passed'));
-  var session = new figo.Session(access_token);
+  var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.get_transactions(function(error, transactions){
       if(error)
@@ -73,7 +94,7 @@ function makePayment(access_token, account, amount, users_list){
     //-------
     dump: function(){return this}
   };
-  var session = new figo.Session(access_token);
+  var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.add_payment(payment_payload, function(err, payment){
       if(err)
@@ -84,7 +105,7 @@ function makePayment(access_token, account, amount, users_list){
 };
 
 function submitPayment(payment, account, access_token){
-  var session = new figo.Session(access_token);
+  var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.submit_payment(payment, account.supported_tan_schemes[0].tan_scheme_id, 'payment submitted', 'localhost:3000', function(err, result){
       if(err)
@@ -96,7 +117,7 @@ function submitPayment(payment, account, access_token){
 };
 
 function getPayments(account, access_token){
-  session = new figo.Session(access_token);
+  session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.get_payments(account.account_id, function(err, data){
       if(err)

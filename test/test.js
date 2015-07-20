@@ -9,20 +9,65 @@ var figo = require('figo');
 
 //doubling figo library
 beforeEach(function(){
-  this.stub = sinon.stub(figo, 'Session');
-  this.stub.returns({
+  this.stubSession = sinon.stub(figo, 'Session');
+  this.stubSession.returns({
     get_transactions: function(){},
     get_accounts: function(){},
     add_payment: function(){},
     submit_payment: function(){},
     get_payments: function(){}
   });
+
+  this.stubConnection = sinon.stub(figo, 'Connection');
+  this.stubConnection.returns({
+    query_api: function(){}
+  });
 });
 
 afterEach(function(){
-  this.stub.restore();
+  this.stubSession.restore();
+  this.stubConnection.restore();
 });
 describe('bettervest Figo library test', function(){
+  describe('getToken function', function(){
+    it('should have getToken function', function(){
+      assert.equal(typeof index.getToken, 'function');
+    });
+
+    it('should accept two parameters', function(){
+      assert.equal(index.getToken.length, 2);
+    });
+
+    it('should create promise', function(){
+      var spy = sinon.spy(q, 'promise');
+      index.getToken(examples.username, examples.password);
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should create figo session', function(){
+      index.getToken(examples.username, examples.password);
+
+      assert.equal(this.stubConnection.called, true);
+    });
+
+    it('should call figo get_accounts method', function(){
+      var spy = sinon.spy(this.stubConnection(), 'query_api');
+
+      index.getToken(examples.username, examples.password);
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should return pending promise', function(){
+      assert.equal(index.getToken(examples.username, examples.password).inspect().state, 'pending');
+    });
+
+  });
+
   describe('getAccounts function', function(){
     it('should have function getAccounts', function(){
       assert.equal(typeof index.getAccounts, 'function');
@@ -49,11 +94,11 @@ describe('bettervest Figo library test', function(){
     it('should create figo session', function(){
       index.getAccounts(examples.access_token);
 
-      assert.equal(this.stub.called, true);
+      assert.equal(this.stubSession.called, true);
     });
 
     it('should call figo get_accounts method', function(){
-      var spy = sinon.spy(this.stub(), 'get_accounts');
+      var spy = sinon.spy(this.stubSession(), 'get_accounts');
 
       index.getAccounts(examples.access_token);
       assert.equal(spy.called, true);
@@ -91,11 +136,11 @@ describe('bettervest Figo library test', function(){
     it('should create figo session', function(){
       index.getTransactions('1', examples.access_token);
 
-      assert.equal(this.stub.called, true);
+      assert.equal(this.stubSession.called, true);
     });
 
     it('should call figo get_transactions method', function(){
-      var spy = sinon.spy(this.stub(), 'get_transactions');
+      var spy = sinon.spy(this.stubSession(), 'get_transactions');
       index.getTransactions('1', examples.access_token);
 
       assert.equal(spy.called, true);
@@ -120,7 +165,7 @@ describe('bettervest Figo library test', function(){
     it('should create figo session', function(){
       index.makePayment(examples.access_token, examples.account_from, 0, examples.account_to);
 
-      assert.equal(this.stub.called, true);
+      assert.equal(this.stubSession.called, true);
     });
 
     it('should create promise', function(){
@@ -133,7 +178,7 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should call figo add_payment method', function(){
-      var spy = sinon.spy(this.stub(), 'add_payment');
+      var spy = sinon.spy(this.stubSession(), 'add_payment');
       index.makePayment(examples.access_token, {}, 'sum', {});
 
       assert.equal(spy.called, true);
@@ -156,9 +201,9 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should create figo session', function(){
-      index.submitPayment();
+      index.submitPayment(examples.payment, examples.account_from, examples.access_token);
 
-      assert.equal(this.stub.called, true);
+      assert.equal(this.stubSession.called, true);
     });
 
     it('should create promise', function(){
@@ -171,7 +216,7 @@ describe('bettervest Figo library test', function(){
     });
 
     it('should call figo submit_payment function', function(){
-      var spy = sinon.spy(this.stub(), 'submit_payment');
+      var spy = sinon.spy(this.stubSession(), 'submit_payment');
       index.submitPayment(examples.payment, examples.account_from, examples.access_token);
 
       assert.equal(spy.called, true);
@@ -194,14 +239,14 @@ describe('bettervest Figo library test', function(){
     });
 
     it('shoud create figo Session', function(){
-      index.getPayments();
+      index.getPayments(examples.account_from, examples.access_token);
 
-      assert.equal(this.stub.called, true);
+      assert.equal(this.stubSession.called, true);
     });
 
     it('should create promise', function(){
       var spy = sinon.spy(q, 'promise');
-      index.getPayments();
+      index.getPayments(examples.account_from, examples.access_token);
 
       assert.equal(spy.called, true);
 
