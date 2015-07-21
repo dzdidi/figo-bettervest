@@ -56,7 +56,7 @@ function getAccounts(access_token){
     session.get_accounts(function(error, accounts){
       if(error)
         reject(error);
-      resolve(accounts[1]);
+      resolve(accounts);
     });
   });
 };
