@@ -1,14 +1,9 @@
 var figo = require('figo');
-var examples = require('./examples.js')
 var Q = require('q');
 var dateFormat = require('dateformat');
 var https = require('https');
 
-var credentials = {
-  "app_url": "http://localhost:3000",
-  "client_secret": "S_pWwIfXWmdtUbEUJhk9QAXmUGgsaG_zUzNGE8IzaP1U",
-  "client_id": "CGh0sN9QEmnnLLXLBacCLzeMhagoW5fvUaY1dDe-zQ-0"
-};
+var credentials = require('./credentials.js');
 
 if(process.env.NODE_ENV == 'test'){
   module.exports = {getToken: getToken,
@@ -19,7 +14,9 @@ if(process.env.NODE_ENV == 'test'){
                     cleanTransactionSubject: cleanTransactionSubject,
                     createPaymentContainer: createPaymentContainer,
                     submitPayment: submitPayment,
-                    getPayments: getPayments
+                    getPayments: getPayments,
+                    setupAccount: setupAccount,
+                    validReceiver: validReceiver
                   };
 } else{
   module.exports = {getAccounts: getAccounts,
@@ -27,7 +24,8 @@ if(process.env.NODE_ENV == 'test'){
                     makePayment: makePayment,
                     getPayments: getPayments,
                     submitPayment: submitPayment,
-                    getToken: getToken
+                    getToken: getToken,
+                    setupAccount: setupAccount
                   };
 };
 
@@ -39,7 +37,7 @@ function getToken(username, password){
   };
 
   return Q.promise(function(resolve, reject){
-    var connection = new figo.Connection(examples.client_id, examples.client_secret);
+    var connection = new figo.Connection(credentials.client_id, credentials.client_secret);
     connection.query_api("/auth/token", options, function(err, data){
       if(err)
         reject(err);
@@ -50,7 +48,7 @@ function getToken(username, password){
 
 function getAccounts(access_token){
   if(!access_token)
-    return(Error('Access token should be passed'));
+    throw(Error('Access token should be passed'));
   var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.get_accounts(function(error, accounts){
@@ -76,24 +74,34 @@ function getTransactions(account_id, access_token){
   });
 };
 
-//to much parameters logic should be changed
 // test account A1.1 does not support container payments
-function makePayment(access_token, account, amount, users_list){
-  var payment_payload = {
-    "account_id": account.account_id,
-    "amount": amount,
-    // "container": createPaymentContainer(account, users_list),
-    //----------
-    "bank_code": users_list.bank_code,
-    "iban": users_list.iban,
-    "account_number": users_list.account_number,
-    "currency": "EUR",
-    "name": "bettervest",
-    "purpose": "some optional information here",
-    "type": "Transfer",
-    //-------
-    dump: function(){return this}
-  };
+function makePayment(account, user_or_list, access_token){
+  // normal payment
+  if(!Array.isArray(user_or_list)){
+    if(!validReceiver(user_or_list))
+      return(Error('receiver is not valid')); // should be changed to exception
+    var payment_payload = {
+      "account_id": account.account_id,
+      "amount": user_or_list.amount,
+      "bank_code": user_or_list.bank_code,
+      "bank_name": user_or_list.iban,
+      "account_number": user_or_list.account_number,
+      "currency": "EUR",
+      "name": "bettervest",
+      "purpose": user_or_list.transaction_topic,
+      "type": "Transfer",
+      dump: function(){return this}
+    };
+  } else {
+    // container payment
+    var payment_payload = {
+      "account_id": account.account_id,
+      "container": createPaymentContainer(account, user_or_list),
+      "type": "Transfer",
+      dump: function(){return this}
+    };
+  }
+
   var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.add_payment(payment_payload, function(err, payment){
@@ -107,7 +115,7 @@ function makePayment(access_token, account, amount, users_list){
 function submitPayment(payment, account, access_token){
   var session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
-    session.submit_payment(payment, account.supported_tan_schemes[0].tan_scheme_id, 'payment submitted', 'localhost:3000', function(err, result){
+    session.submit_payment(payment, account.supported_tan_schemes[0].tan_scheme_id, 'payment submitted', credentials.redirect_payment, function(err, result){
       if(err)
         reject(err);
       //result is url which must to be opened by user probably for payment approvement
@@ -120,6 +128,34 @@ function getPayments(account, access_token){
   session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
     session.get_payments(account.account_id, function(err, data){
+      if(err)
+        reject(err);
+      resolve(data);
+    });
+  });
+};
+
+// returns response with taks_token
+/*
+open http://api.figo.me/task/start?id=<task token> for strating task (PIN/TAN entry can be required)
+*/
+function setupAccount(bank_credentials, access_token){
+  session = new figo.Session(access_token.access_token);
+
+  return Q.promise(function(resolve, reject){
+    var data = {
+      bank_code: bank_credentials.bank_code,
+      iban: bank_credentials.iban,
+      country: 'de',
+      credentials: [
+        credentials.username,
+        credentials.password
+      ],
+      save_pin: true,
+      disable_first_sync: false
+    };
+    session.query_api('/rest/accounts', data, 'POST', function(err, data){
+      console.log(err);
       if(err)
         reject(err);
       resolve(data);
@@ -144,33 +180,30 @@ function cleanTransactionSubject(transaction){
 };
 
 // should be rewised
-function createPaymentContainer(account, users_list){
+function createPaymentContainer(account, user_or_list){
   var container = [];
-  if(!Array.isArray(users_list)){
-    var val = users_list;
-    users_list = new Array();
-    users_list.push(val);
-  };
-  try{
-    users_list.forEach(function(listEntry){
+    user_or_list.forEach(function(listEntry){
+      if(!validReceiver(listEntry))
+        throw(Error('one of receivers is not valid')); // should be changed to exception
       var payment = {
         "account_id": account.account_id,
         "amount": listEntry.amount,
         "bank_code": listEntry.bank_code,
-        "iban": listEntry.iban,
-        // "bank_name": listEntry.bank_name, //not really necessary
+        "bank_name": listEntry.bank_name,
         "account_number": listEntry.account_number,
         "currency": "EUR",
         "name": "bettervest",
-        "purpose": "some optional information here",
+        "purpose": user_or_list.transaction_topic,
         "type": "Transfer",
         dump: function(){return this}
       };
       container.push(payment);
     });
-  } catch(e){
-    return(e);
-  }
-
   return container;
+};
+
+function validReceiver(user){
+  if(!user.amount || !user.bank_code || !user.bank_name || !user.account_number || !user.transaction_topic)
+    return false;
+  return true;
 };
