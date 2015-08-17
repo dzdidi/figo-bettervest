@@ -137,7 +137,7 @@ function getPayments(account, access_token){
   });
 };
 
-// returns response with taks_token
+// returns response with task_token
 /*
 open http://api.figo.me/task/start?id=<task token> for strating task (PIN/TAN entry can be required)
 */
