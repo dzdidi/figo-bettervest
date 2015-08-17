@@ -16,7 +16,8 @@ if(process.env.NODE_ENV == 'test'){
                     submitPayment: submitPayment,
                     getPayments: getPayments,
                     setupAccount: setupAccount,
-                    validReceiver: validReceiver
+                    validReceiver: validReceiver,
+                    getLoginSettings: getLoginSettings
                   };
 } else{
   module.exports = {getAccounts: getAccounts,
@@ -41,7 +42,7 @@ function getToken(username, password){
     connection.query_api("/auth/token", options, function(err, data){
       if(err)
         reject(err);
-      resolve(data);
+      resolve(data.credentials);
     });
   });
 };
@@ -143,25 +144,40 @@ function setupAccount(bank_credentials, access_token){
   session = new figo.Session(access_token.access_token);
 
   return Q.promise(function(resolve, reject){
-    var data = {
-      bank_code: bank_credentials.bank_code,
-      iban: bank_credentials.iban,
-      country: 'de',
-      credentials: [
-        credentials.username,
-        credentials.password
-      ],
-      save_pin: true,
-      disable_first_sync: false
-    };
-    session.query_api('/rest/accounts', data, 'POST', function(err, data){
-      console.log(err);
+    getLoginSettings(bank_credentials.bank_code, access_token).then(function(loginFields, access_token){
+      var data = {
+        bank_code: bank_credentials.bank_code,
+        iban: bank_credentials.iban,
+        country: 'de',
+        credentials: [],
+        save_pin: true,
+        disable_first_sync: false
+      };
+
+      loginFields.credentials.forEach(function(field){
+        data.credentials.push(bank_credentials[field.label]);
+      });
+
+      session.query_api('/rest/accounts', data, 'POST', function(err, data){
+        console.log(err);
+        if(err)
+          reject(err);
+        resolve(data);
+      });
+    });
+  });
+};
+
+function getLoginSettings(bank_code, access_token){
+  session = new figo.Session(access_token.access_token);
+  return Q.promise(function(resolve, reject){
+    session.query_api('/rest/catalog/banks/de/'+bank_code, function(err, data){
       if(err)
         reject(err);
       resolve(data);
     });
   });
-};
+}
 /* ==========================
     additional logic helpers
    ========================== */

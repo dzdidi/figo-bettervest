@@ -288,11 +288,6 @@ describe('bettervest Figo library test', function(){
       spy.restore();
     });
 
-    it('should establish figo session', function(){
-      index.setupAccount({}, credentials.access_token)
-      assert.equal(this.stubSession.called, true);
-    });
-
     it('should call query_api function', function(){
       var spy = sinon.spy(this.stubSession(), 'query_api');
       index.setupAccount({}, credentials.access_token);
@@ -401,6 +396,44 @@ describe('bettervest Figo library test', function(){
         transaction_topic: 'topic'
       };
       assert.equal(index.validReceiver(data), false);
+    });
+  });
+
+  describe('get bank login settings', function(){
+    it('shoud have getLoginSettings funtion', function(){
+      assert.equal(typeof index.getLoginSettings, 'function');
+    });
+
+    it('should accept two parameter', function(){
+      assert.equal(index.getLoginSettings.length, 2);
+    });
+
+    it('should create figo session', function(){
+      index.getLoginSettings('bank_code', credentials.access_token);
+
+      assert.equal(this.stubSession.called, true);
+    });
+
+    it('should query figo API', function(){
+      var spy = sinon.spy(this.stubSession(), 'query_api');
+      index.getLoginSettings('bank_code', credentials.access_token);
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should create promise', function(){
+      var spy = sinon.spy(q, 'promise');
+      index.getLoginSettings('bank_code', credentials.access_token);
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should return pending promise', function(){
+      assert.equal(index.getLoginSettings('bank_code', credentials.access_token).inspect().state, 'pending');
     });
   });
 });
