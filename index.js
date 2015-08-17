@@ -26,7 +26,8 @@ if(process.env.NODE_ENV == 'test'){
                     getPayments: getPayments,
                     submitPayment: submitPayment,
                     getToken: getToken,
-                    setupAccount: setupAccount
+                    setupAccount: setupAccount,
+                    getLoginSettings: getLoginSettings
                   };
 };
 
@@ -42,7 +43,7 @@ function getToken(username, password){
     connection.query_api("/auth/token", options, function(err, data){
       if(err)
         reject(err);
-      resolve(data.credentials);
+      resolve(data);
     });
   });
 };
@@ -171,7 +172,7 @@ function setupAccount(bank_credentials, access_token){
 function getLoginSettings(bank_code, access_token){
   session = new figo.Session(access_token.access_token);
   return Q.promise(function(resolve, reject){
-    session.query_api('/rest/catalog/banks/de/'+bank_code, function(err, data){
+    session.query_api('/rest/catalog/banks/de/'+bank_code, {}, 'GET', function(err, data){
       if(err)
         reject(err);
       resolve(data);
