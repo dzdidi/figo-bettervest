@@ -17,7 +17,8 @@ if(process.env.NODE_ENV == 'test'){
                     getPayments: getPayments,
                     setupAccount: setupAccount,
                     validReceiver: validReceiver,
-                    getLoginSettings: getLoginSettings
+                    getLoginSettings: getLoginSettings,
+                    getAccount: getAccount
                   };
 } else{
   module.exports = {getAccounts: getAccounts,
@@ -27,7 +28,8 @@ if(process.env.NODE_ENV == 'test'){
                     submitPayment: submitPayment,
                     getToken: getToken,
                     setupAccount: setupAccount,
-                    getLoginSettings: getLoginSettings
+                    getLoginSettings: getLoginSettings,
+                    getAccount: getAccount
                   };
 };
 
@@ -57,6 +59,19 @@ function getAccounts(access_token){
       if(error)
         reject(error);
       resolve(accounts);
+    });
+  });
+};
+
+function getAccount(account_id, access_token){
+  if(!access_token)
+    throw(Error('Access token should be passed'));
+  var session = new figo.Session(access_token.access_token);
+  return Q.promise(function(resolve, reject){
+    session.get_account(account_id, function(error, accounts){
+      if(error)
+        reject(error);
+      resolve(account);
     });
   });
 };

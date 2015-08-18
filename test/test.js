@@ -108,6 +108,46 @@ describe('bettervest Figo library test', function(){
     });
   });
 
+  describe('getAccount function', function(){
+    it('should have function getAccount', function(){
+      assert.equal(typeof index.getAccount, 'function');
+    });
+
+    it('should accept two parameter', function(){
+      assert.equal(index.getAccount.length, 2);
+    });
+
+    // it('should return error if access token was not passed', function(){});
+
+    it('should create promise', function(){
+      var spy = sinon.spy(q, 'promise');
+      index.getAccount('account', credentials.access_token);
+
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should create figo session', function(){
+      index.getAccounts(credentials.access_token);
+
+      assert.equal(this.stubSession.called, true);
+    });
+
+    it('should call figo get_accounts method', function(){
+      var spy = sinon.spy(this.stubSession(), 'get_accounts');
+
+      index.getAccounts(credentials.access_token);
+      assert.equal(spy.called, true);
+
+      spy.restore();
+    });
+
+    it('should return pending promise', function(){
+      assert.equal(index.getAccounts(credentials.access_token).inspect().state, 'pending');
+    });
+  });
+
   describe('getTransactions function', function(){
     it('should have function getTransactions', function(){
       assert.equal(typeof index.getTransactions, 'function');
